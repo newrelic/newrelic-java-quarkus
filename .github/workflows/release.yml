@@ -35,7 +35,6 @@ jobs:
 
       - name: Build with Gradle and No verifyInstrumentation as large heap size needed
         run: |
-          . ./newrelic-dependencies.sh
           ./gradlew clean build install 
 
       - name: Identify Release Type
