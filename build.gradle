@@ -12,17 +12,13 @@ buildscript {
 
   dependencies {
     classpath 'gradle-templates:gradle-templates:1.5'
-    classpath 'com.newrelic.agent.java:gradle-verify-instrumentation-plugin:3.2'
+    classpath 'com.newrelic.agent.java:gradle-verify-instrumentation-plugin:4.0'
   }
-}
-
-plugins {
-  id "de.undercouch.download" version "5.0.0"
 }
 
 project.ext {
   group = 'com.newrelic.instrumentation.labs'
-  javaAgentVersion = '6.4.0'
+  javaAgentVersion = '8.4.0'
 
   // Aligned with minimum Java major version supported by latest Java Agent
   javaVersion = JavaVersion.VERSION_1_8
@@ -30,86 +26,45 @@ project.ext {
 }
 
 apply plugin: 'java'
-apply plugin: 'de.undercouch.download'
 
 import templates.*
-import de.undercouch.gradle.tasks.download.Download
 
-task getAgent(type: Download) {
-   def rootProject = projectDir.path
-   src 'https://repo1.maven.org/maven2/com/newrelic/agent/java/newrelic-agent/'+project.javaAgentVersion+'/newrelic-agent-'+project.javaAgentVersion+'.jar'
-   dest projectDir.path+"/libs/newrelic-agent-"+project.javaAgentVersion+".jar"
-}
+tasks.register('createModule') {
+    description = 'Generate project files for a new instrumentation module'
+    group = 'New Relic Labs'
+    doLast {
 
-task extractJars(type: Copy) {
+        def rootProject = projectDir.path
 
-    from zipTree(projectDir.path+"/libs/newrelic-agent-"+project.javaAgentVersion+".jar")
-    into projectDir.path+"/libs"
-}
+        String projectGroup = TemplatesPlugin.prompt('Instrumentation Module Group (default: ' + project.ext.group + ') (Hit return to use default):\n')
+        String projectName = TemplatesPlugin.prompt('Instrumentation Module Name:\n')
 
-task cleanUp(type: Delete) {
-  delete projectDir.path+'/libs/META-INF', projectDir.path+'/libs/com', projectDir.path+'/libs/mozilla'
-  delete projectDir.path+'/libs/LICENSE', projectDir.path+'/libs/Log4j-events.dtd', projectDir.path+'/libs/THIRD_PARTY_NOTICES.md'
-  delete fileTree(projectDir.path+'/libs') {
-    include '**/*.xsd'
-    include '**/*.xml'
-    include '**/*.yml'
-    include '**/*.properties'
-  }
-}
+        if (projectName == null) {
+            throw new Exception("Please specify a valid module name.")
+        } else {
+            projectName = projectName.trim()
+        }
 
-task checkForDependencies(type: Exec) {
-    environment "JAVAAGENTVERSION", javaAgentVersion
-    def rootProject = projectDir.path
-    def cmdLine = rootProject+'/newrelic-dependencies.sh'
-    workingDir rootProject
-    commandLine  cmdLine
+        if (projectGroup == null || projectGroup.trim() == '') {
+            projectGroup = project.ext.group
+        } else {
+            projectGroup = projectGroup.trim()
+        }
 
-}
+        def projectLibDir = new File(rootProject + '/lib')
 
-task buildIfNeeded {
-   dependsOn checkForDependencies
-   dependsOn jar
-   tasks.findByName('jar').mustRunAfter 'checkForDependencies'
-}
+        def projectPath = new File(projectName)
+        if (projectPath.exists()) {
+            throw new Exception(projectPath.path + ' already exists.')
+        }
 
-task createModule {
-  dependsOn checkForDependencies
-  description = 'Generate project files for a new instrumentation module'
-  group = 'New Relic Labs'
-  doLast {
+        def projectJava = new File(projectPath, 'src/main/java')
+        def projectTest = new File(projectPath, 'src/test/java')
+        mkdir projectJava
+        mkdir projectTest
 
-    def rootProject = projectDir.path
-
-    String projectGroup = TemplatesPlugin.prompt('Instrumentation Module Group (default: ' + project.ext.group + ') (Hit return to use default):\n')
-    String projectName = TemplatesPlugin.prompt('Instrumentation Module Name:\n')
-
-    if (projectName == null) {
-      throw new Exception("Please specify a valid module name.")
-    } else {
-      projectName = projectName.trim()
-    }
-
-    if (projectGroup == null || projectGroup.trim() == '') {
-      projectGroup = project.ext.group
-    } else {
-      projectGroup = projectGroup.trim()
-    }
-
-    def projectLibDir = new File(rootProject+'/lib')
-
-    def projectPath = new File(projectName)
-    if (projectPath.exists()) {
-      throw new Exception(projectPath.path + ' already exists.')
-    }
-
-    def projectJava = new File(projectPath, 'src/main/java')
-    def projectTest = new File(projectPath, 'src/test/java')
-    mkdir projectJava
-    mkdir projectTest
-
-    ProjectTemplate.fromRoot(projectPath) {
-       'build.gradle' '''
+        ProjectTemplate.fromRoot(projectPath) {
+            'build.gradle' '''
         // Build.gradle generated for instrumentation module PROJECT_NAME
 
         apply plugin: 'java'
@@ -122,7 +77,6 @@ task createModule {
            // New Relic Labs Java Agent dependencies
            implementation 'com.newrelic.agent.java:newrelic-agent:JAVA_AGENT_VERSION'
            implementation 'com.newrelic.agent.java:newrelic-api:JAVA_AGENT_VERSION'
-           implementation fileTree(include: ['*.jar'], dir: '../libs')
            implementation fileTree(include: ['*.jar'], dir: '../test-lib')
         }
 
@@ -142,15 +96,15 @@ task createModule {
           // passes 'javax.servlet:servlet-api:[2.2,2.5]'
           // exclude 'javax.servlet:servlet-api:2.4.public_draft'
         }'''.replace('PROJECT_GROUP', projectGroup)
-            .replace('PROJECT_NAME', projectName)
-            .replace('PROJECT_PATH', projectPath.path)
-            .replace('JAVA_AGENT_VERSION', project.ext.javaAgentVersion)
-     }
+                    .replace('PROJECT_NAME', projectName)
+                    .replace('PROJECT_PATH', projectPath.path)
+                    .replace('JAVA_AGENT_VERSION', project.javaAgentVersion)
+        }
 
-     File settings = new File('settings.gradle')
-     settings.append("include '$projectName'\n")
-     println "Created module in $projectPath.path."
-  }
+        File settings = new File('settings.gradle')
+        settings.append("include '$projectName'\n")
+        println "Created module in $projectPath.path."
+    }
 }
 
 subprojects {
@@ -168,24 +122,20 @@ subprojects {
   targetCompatibility = project.javaVersion
 
   dependencies {
-    testImplementation  fileTree(dir: '../lib', include: "*.jar") // + project.javaAgentVersion
+    testImplementation  fileTree(dir: '../lib', include: "*.jar")
     testImplementation 'org.nanohttpd:nanohttpd:2.3.1'
     testImplementation 'com.newrelic.agent.java:newrelic-agent:' + project.javaAgentVersion
   }
 
-  task install(dependsOn: buildIfNeeded, type: Copy) {
-    description = 'Copies compiled jar to the NEW_RELIC_EXTENSIONS_DIR.'
-    group  = 'New Relic Labs'
+    tasks.register('install', Copy) {
+        description = 'Copies compiled jar to the NEW_RELIC_EXTENSIONS_DIR.'
+        group = 'New Relic Labs'
 
-    def extDir = System.getenv("NEW_RELIC_EXTENSIONS_DIR") ?: " "
+        def extDir = System.getenv("NEW_RELIC_EXTENSIONS_DIR") ?: " "
 
-    from jar
-    into extDir
-  }
-
-  compileJava.doFirst {
-    tasks.findByName('checkForDependencies')
-  }
+        from jar
+        into extDir
+    }
 
   install.doFirst  {
     def extDir = System.getenv("NEW_RELIC_EXTENSIONS_DIR")
