@@ -3,25 +3,25 @@
 
 // Global defaults - override here or in individual modules as needed.
 buildscript {
-  repositories {
-    flatDir dirs: 'template-lib'
-    mavenLocal()
-    mavenCentral()
-    gradlePluginPortal()
-  }
+    repositories {
+        flatDir dirs: 'template-lib'
+        mavenLocal()
+        mavenCentral()
+        gradlePluginPortal()
+    }
 
-  dependencies {
-    classpath 'gradle-templates:gradle-templates:1.5'
-    classpath 'com.newrelic.agent.java:gradle-verify-instrumentation-plugin:4.0'
-  }
+    dependencies {
+        classpath 'gradle-templates:gradle-templates:1.5'
+        classpath 'com.newrelic.agent.java:gradle-verify-instrumentation-plugin:4.0'
+    }
 }
 
 project.ext {
-  group = 'com.newrelic.instrumentation.labs'
-  javaAgentVersion = '8.4.0'
+    group = 'com.newrelic.instrumentation.labs'
+    javaAgentVersion = project.findProperty('java.agent.version')
 
-  // Aligned with minimum Java major version supported by latest Java Agent
-  javaVersion = JavaVersion.VERSION_1_8
+    // Aligned with minimum Java major version supported by latest Java Agent
+    javaVersion = JavaVersion.VERSION_1_8
 
 }
 
@@ -74,9 +74,10 @@ tasks.register('createModule') {
            // Example:
            // implementation 'javax.servlet:servlet-api:2.5'
 
-           // New Relic Labs Java Agent dependencies
-           implementation 'com.newrelic.agent.java:newrelic-agent:JAVA_AGENT_VERSION'
-           implementation 'com.newrelic.agent.java:newrelic-api:JAVA_AGENT_VERSION'
+           // New Relic Java Agent dependencies
+           implementation 'com.newrelic.agent.java:newrelic-agent:' + project.findProperty('java.agent.version') 
+           implementation 'com.newrelic.agent.java:newrelic-api:' + project.findProperty('java.agent.version')
+           implementation 'com.newrelic.agent.java:agent-bridge:' + project.findProperty('java.agent.version')
            implementation fileTree(include: ['*.jar'], dir: '../test-lib')
         }
 
@@ -97,8 +98,6 @@ tasks.register('createModule') {
           // exclude 'javax.servlet:servlet-api:2.4.public_draft'
         }'''.replace('PROJECT_GROUP', projectGroup)
                     .replace('PROJECT_NAME', projectName)
-                    .replace('PROJECT_PATH', projectPath.path)
-                    .replace('JAVA_AGENT_VERSION', project.javaAgentVersion)
         }
 
         File settings = new File('settings.gradle')
@@ -108,28 +107,32 @@ tasks.register('createModule') {
 }
 
 subprojects {
-  repositories {
-    mavenLocal()
-    mavenCentral()
-  }
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
 
-  apply plugin: 'java'
-  apply plugin: 'eclipse'
-  apply plugin: 'idea'
-  apply plugin: 'com.newrelic.gradle-verify-instrumentation-plugin'
+    apply plugin: 'java'
+    apply plugin: 'eclipse'
+    apply plugin: 'idea'
+    apply plugin: 'com.newrelic.gradle-verify-instrumentation-plugin'
 
-  sourceCompatibility = project.javaVersion
-  targetCompatibility = project.javaVersion
+    sourceCompatibility = project.javaVersion
+    targetCompatibility = project.javaVersion
 
-  dependencies {
-    testImplementation  fileTree(dir: '../lib', include: "*.jar")
-    testImplementation 'org.nanohttpd:nanohttpd:2.3.1'
-    testImplementation 'com.newrelic.agent.java:newrelic-agent:' + project.javaAgentVersion
-  }
+    dependencies {
+        testImplementation  fileTree(dir: '../lib', include: "*.jar") // + project.javaAgentVersion
+        testImplementation 'org.nanohttpd:nanohttpd:2.3.1'
+        testImplementation 'com.newrelic.agent.java:newrelic-agent:' + project.javaAgentVersion
+    }
+
+    jar {
+        from project.sourceSets.main.output
+    }
 
     tasks.register('install', Copy) {
         description = 'Copies compiled jar to the NEW_RELIC_EXTENSIONS_DIR.'
-        group = 'New Relic Labs'
+        group = 'New Relic'
 
         def extDir = System.getenv("NEW_RELIC_EXTENSIONS_DIR") ?: " "
 
@@ -137,18 +140,18 @@ subprojects {
         into extDir
     }
 
-  install.doFirst  {
-    def extDir = System.getenv("NEW_RELIC_EXTENSIONS_DIR")
-     if (extDir == null) {
-         throw new Exception("Must set NEW_RELIC_EXTENSIONS_DIR.")
-     }
+    install.doFirst  {
+        def extDir = System.getenv("NEW_RELIC_EXTENSIONS_DIR")
+        if (extDir == null) {
+            throw new Exception("Must set NEW_RELIC_EXTENSIONS_DIR.")
+        }
 
-     if (extDir.startsWith("~" + File.separator)) {
-         extDir = System.getProperty("user.home") + extDir.substring(1);
-     }
+        if (extDir.startsWith("~" + File.separator)) {
+            extDir = System.getProperty("user.home") + extDir.substring(1);
+        }
 
-     if (!file(extDir).directory) {
-         throw new Exception(extDir + "NEW_RELIC_EXTENSIONS_DIR, set as '" + extDir + "'is not a valid directory.")
-     }
-  }
+        if (!file(extDir).directory) {
+            throw new Exception(extDir + "NEW_RELIC_EXTENSIONS_DIR, set as '" + extDir + "'is not a valid directory.")
+        }
+    }
 }

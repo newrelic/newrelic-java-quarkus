@@ -6,14 +6,14 @@ dependencies {
     implementation 'io.quarkus:quarkus-resteasy-reactive:3.0.0.Final'
 
     // New Relic Labs Java Agent dependencies
-    implementation 'com.newrelic.agent.java:newrelic-agent:8.4.0'
-    implementation 'com.newrelic.agent.java:newrelic-api:8.4.0'
+    implementation 'com.newrelic.agent.java:newrelic-agent:' + project.findProperty('java.agent.version')
+    implementation 'com.newrelic.agent.java:newrelic-api:' + project.findProperty('java.agent.version')
     implementation fileTree(include: ['*.jar'], dir: '../test-lib')
 }
 
 jar {
     manifest {
-        attributes 'Implementation-Title': 'com.newrelic.instrumentation.labs.quarkus-resteasy-reactive-3.0'
+        attributes 'Implementation-Title': 'com.newrelic.instrumentation.labs.quarkus-rest-3.0'
         attributes 'Implementation-Vendor': 'New Relic Labs'
         attributes 'Implementation-Vendor-Id': 'com.newrelic.labs'
         attributes 'Implementation-Version': 1.0
@@ -22,7 +22,7 @@ jar {
 
 verifyInstrumentation {
     passesOnly 'io.quarkus:quarkus-rest:[3.0.0,)'
-    passesOnly 'io.quarkus:quarkus-resteasy-reactive:[3.0.0,3.9.0]'
+    passesOnly 'io.quarkus:quarkus-resteasy-reactive:[3.0.0,3.9.0)'
     excludeRegex '.*CR.*'
     excludeRegex '.*Alpha[0-9]'
     excludeRegex '.*Beta[0-9]'
