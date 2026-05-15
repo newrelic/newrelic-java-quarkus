@@ -123,10 +123,6 @@ subprojects {
         }
     }
 
-    tasks.withType(JavaCompile).configureEach {
-        options.release.set(8) // Compiles against Java 8 APIs even if using a newer JDK
-    }
-
     dependencies {
         testImplementation  fileTree(dir: '../lib', include: "*.jar") // + project.javaAgentVersion
         testImplementation 'org.nanohttpd:nanohttpd:2.3.1'
