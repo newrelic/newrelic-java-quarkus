@@ -2,6 +2,12 @@
 
 apply plugin: 'java'
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
 dependencies {
     implementation 'io.quarkus:quarkus-resteasy-reactive:2.6.0.Final'
 

@@ -2,6 +2,12 @@
 
 apply plugin: 'java'
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
 dependencies {
     implementation 'io.quarkus:quarkus-vertx:3.12.0'
 
@@ -22,4 +28,5 @@ jar {
 
 verifyInstrumentation {
     passesOnly 'io.quarkus:quarkus-vertx:[3.12.0,)'
+    excludeRegex '.*3.12.0.CR1'
 }

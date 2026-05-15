@@ -117,8 +117,11 @@ subprojects {
     apply plugin: 'idea'
     apply plugin: 'com.newrelic.gradle-verify-instrumentation-plugin'
 
-    sourceCompatibility = project.javaVersion
-    targetCompatibility = project.javaVersion
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(8)
+        }
+    }
 
     dependencies {
         testImplementation  fileTree(dir: '../lib', include: "*.jar") // + project.javaAgentVersion
