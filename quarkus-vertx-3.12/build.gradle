@@ -28,4 +28,5 @@ jar {
 
 verifyInstrumentation {
     passesOnly 'io.quarkus:quarkus-vertx:[3.12.0,)'
+    excludeRegex '.*3.12.0.CR1'
 }
