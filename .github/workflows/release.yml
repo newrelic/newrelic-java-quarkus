@@ -18,10 +18,10 @@ jobs:
           fetch-depth: 0
           
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
-          java-version: 17
+          java-version: 21
           distribution: 'temurin'
 
 
@@ -180,7 +180,7 @@ jobs:
            git commit -m "Update Changelog for Release [skip ci]"
 
           # Push the changes to the remote repository
-           git push --quiet --set-upstream origin HEAD
+           # git push --quiet --set-upstream origin HEAD
       
       - name: Get Compare URL
         run: |
